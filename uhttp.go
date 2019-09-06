@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/gin-gonic/gin"
 	"github.com/michelia/ulog"
 )
 
@@ -67,4 +68,34 @@ func PostForm(slog ulog.Logger, url string, data url.Values, v interface{}) erro
 		return err
 	}
 	return nil
+}
+
+type bodyLogWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (w bodyLogWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
+}
+
+// GinBodyLogJsonMiddleware print body log
+func GinBodyLogJsonMiddleware(slog ulog.Logger) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		if c.Request.Method == "POST" {
+			b, err := c.GetRawData()
+			if err != nil {
+				slog.Error().Caller().Err(err).Msg("c.GetRawData()")
+			}
+			c.Request.Body = ioutil.NopCloser(bytes.NewReader(b))
+			slog.Debug().RawJSON("body", b).Msg("gin_request_body")
+		}
+		blw := &bodyLogWriter{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
+		c.Writer = blw
+		c.Next()
+		if c.Writer.Status() == 200 {
+			slog.Debug().RawJSON("body", blw.body.Bytes()).Msg("gin_response_body")
+		}
+	}
 }

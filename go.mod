@@ -11,4 +11,7 @@ replace (
 
 go 1.12
 
-require github.com/michelia/ulog v1.0.5
+require (
+	github.com/gin-gonic/gin v1.4.0
+	github.com/michelia/ulog v1.0.5
+)
