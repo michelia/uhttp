@@ -191,19 +191,20 @@ func (w bodyLogWriter) Write(b []byte) (int, error) {
 // GinBodyLogJsonMiddleware print body log
 func GinBodyLogJsonMiddleware(slog ulog.Logger) func(c *gin.Context) {
 	return func(c *gin.Context) {
+		action := c.Request.URL.Path
 		if c.Request.Method == "POST" {
 			b, err := c.GetRawData()
 			if err != nil {
 				slog.Error().Caller().Err(err).Msg("c.GetRawData()")
 			}
 			c.Request.Body = ioutil.NopCloser(bytes.NewReader(b))
-			slog.Debug().RawJSON("body", b).Msg("gin_request_body")
+			slog.Debug().Str("action", action).RawJSON("body", b).Msg("gin_request_body")
 		}
 		blw := &bodyLogWriter{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
 		c.Writer = blw
 		c.Next()
 		if c.Writer.Status() == 200 {
-			slog.Debug().RawJSON("body", blw.body.Bytes()).Msg("gin_response_body")
+			slog.Debug().Str("action", action).RawJSON("body", blw.body.Bytes()).Msg("gin_response_body")
 		}
 	}
 }
